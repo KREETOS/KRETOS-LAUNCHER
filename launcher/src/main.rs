@@ -264,6 +264,8 @@ struct Launcher {
     prepare_error: Option<String>,
     client: Option<Running>,
     client_error: Option<String>,
+    /// A new Minecraft release was published since the launcher last ran.
+    version_notice: Option<String>,
     /// When the running client started, to tell its crash report from older ones.
     client_started: Option<std::time::SystemTime>,
     /// The folder the running game keeps its settings in: the game home, or a modpack's.
@@ -547,6 +549,7 @@ impl Launcher {
             prepare_error: None,
             client: None,
             client_error: None,
+            version_notice: None,
             client_started: None,
             client_home: None,
             crash: None,
@@ -652,6 +655,7 @@ impl Launcher {
         this.load_auth_statuses(true);
         this.fetch_startup_releases();
         this.fetch_links();
+        this.check_new_minecraft(cx);
         if home::getting_ready_preview() {
             this.preparing = true;
             this.play_when_prepared = this.selected().cloned();
@@ -3256,6 +3260,22 @@ impl Launcher {
         let mut page = div().flex().flex_col().gap(px(28.)).child(banner);
         if let Some(e) = self.prepare_error.clone() {
             page = page.child(notice(e, &t));
+        }
+        if let Some(n) = self.version_notice.clone() {
+            let dismiss = button("dismiss-version", "Dismiss", Kind::Ghost, &t).on_click(
+                cx.listener(|this, _: &ClickEvent, _, cx| {
+                    this.version_notice = None;
+                    cx.notify();
+                }),
+            );
+            page = page.child(
+                div()
+                    .flex()
+                    .flex_col()
+                    .gap(px(8.))
+                    .child(notice(n, &t))
+                    .child(dismiss),
+            );
         }
         page = page.child(self.home_tabs(rows, cx));
         if let Some(e) = self.client_error.clone() {

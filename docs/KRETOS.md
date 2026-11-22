@@ -15,6 +15,8 @@ GitHub: https://github.com/KREETOS/KRETOS-LAUNCHER
 | Sign-in gate shows a Microsoft / Ely.by provider chooser | `launcher/src/owner_page.rs` |
 | Settings has a visible **Local offline play** toggle (offline names with existing files) | `launcher/src/dev_options.rs` |
 | Legacy-style **Install and play** panel: account, version and loader picker with one button | `launcher/src/install_play.rs`, `launcher/src/main.rs` |
+| Recent installed versions as chips; new Minecraft release notice on startup | `launcher/src/install_play.rs`, `launcher/src/backend.rs`, `launcher/src/main.rs` |
+| Memory presets: Auto / 2 GB / 4 GB / 8 GB | `launcher/src/launch_page.rs` |
 | Launcher never self-updates (protects local patches) | `launcher/src/backend.rs` |
 | `version list` / `version download <id>` CLI, with SHA-1 checks and authorization gate | `launcher/src/cli.rs`, `launcher/src/minecraft_versions.rs` |
 

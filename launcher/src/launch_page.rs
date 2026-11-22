@@ -349,6 +349,31 @@ impl Launcher {
                         ),
                 )
                 .child(track)
+                .child(
+                    div().flex().gap(px(6.)).children(
+                        [
+                            (None, "Auto"),
+                            (Some(2048u32), "2 GB"),
+                            (Some(4096u32), "4 GB"),
+                            (Some(8192u32), "8 GB"),
+                        ]
+                        .into_iter()
+                        .map(|(mb, label)| {
+                            let id = instance.id.clone();
+                            let on = memory == mb;
+                            button(
+                                format!("mem-{label}"),
+                                label,
+                                if on { Kind::Secondary } else { Kind::Ghost },
+                                &t,
+                            )
+                            .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| {
+                                this.save_memory(&id, mb);
+                                cx.notify();
+                            }))
+                        }),
+                    ),
+                )
                 .child(text(theme::CAPTION).text_color(t.muted).child(tr(about)))
                 .children(result),
         )

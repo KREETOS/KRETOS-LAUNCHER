@@ -44,6 +44,8 @@ Local changes on top of Elyhorizon `faf034f`:
   **Microsoft account / Ely.by account** chooser on the sign-in gate
 - a visible **Local offline play** toggle in Settings (uses game files already on disk)
 - a Legacy-style **Install and play** panel on Java instances (account + version + loader + one button)
+- **recent installed versions** as one-click chips and a **new Minecraft release** notification on startup
+- **memory presets** (Auto / 2 / 4 / 8 GB) beside the memory slider
 - launcher self-update disabled, so local patches are never overwritten
 - `horizon-launcher version list` and `version download <id>` for any Java Edition version
 - the original fork is kept as the `upstream` git remote

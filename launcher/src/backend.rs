@@ -3308,6 +3308,9 @@ pub struct Settings {
     /// comes from the player's own install. Off by default, and absent from the file while off.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub dev_offline: bool,
+    /// The newest Minecraft release seen last time, for the new-version notice.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_seen_mc_version: Option<String>,
 }
 
 impl Settings {

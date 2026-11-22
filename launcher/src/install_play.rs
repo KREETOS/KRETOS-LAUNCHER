@@ -74,6 +74,35 @@ impl Launcher {
         .detach();
     }
 
+    /// Checks Mojang's list once per run and shows a notice when a newer release appeared.
+    pub(super) fn check_new_minecraft(&mut self, cx: &mut Context<Self>) {
+        let task = cx
+            .background_executor()
+            .spawn(async { minecraft_versions::load() });
+        cx.spawn(async move |this, cx| {
+            let Ok(list) = task.await else { return };
+            let _ = this.update(cx, |this, _| {
+                let latest = list.latest_release.clone();
+                let mut settings = backend::Settings::load();
+                match &settings.last_seen_mc_version {
+                    Some(old) if old != &latest => {
+                        this.version_notice = Some(format!(
+                            "New Minecraft {latest} is available. You last saw {old}."
+                        ));
+                        settings.last_seen_mc_version = Some(latest);
+                        let _ = settings.save();
+                    }
+                    None => {
+                        settings.last_seen_mc_version = Some(latest);
+                        let _ = settings.save();
+                    }
+                    _ => {}
+                }
+            });
+        })
+        .detach();
+    }
+
     /// Creates the Java instance and starts it. A fresh sign-in is required for downloads;
     /// when no owner is signed in we open the gate instead of starting a download.
     fn install_and_play(&mut self, cx: &mut Context<Self>) {
@@ -196,12 +225,34 @@ impl Launcher {
                 cx.notify();
             }));
 
+        let mut recent: Vec<String> = self
+            .instances
+            .list
+            .iter()
+            .filter_map(|i| i.java.as_ref().map(|j| j.minecraft.clone()))
+            .collect();
+        recent.sort();
+        recent.dedup();
+        recent.reverse();
+        recent.truncate(6);
+        let recent_chips = recent.into_iter().map(|v| {
+            let id = v.clone();
+            button(format!("recent-{v}"), v, Kind::Ghost, &t).on_click(cx.listener(
+                move |this, _: &ClickEvent, _, cx| {
+                    this.install_play.version = Some(id.clone());
+                    this.install_play.show_versions = false;
+                    cx.notify();
+                },
+            ))
+        });
+
         let mut rows = div()
             .flex()
             .flex_col()
             .gap(px(8.))
             .child(caption("Install and play"))
-            .child(div().flex().gap(px(8.)).child(account_button).child(version_button));
+            .child(div().flex().gap(px(8.)).child(account_button).child(version_button))
+            .child(div().flex().flex_wrap().gap(px(6.)).children(recent_chips));
 
         if self.install_play.show_versions {
             let list: Vec<gpui::AnyElement> = match &self.install_play.versions {
