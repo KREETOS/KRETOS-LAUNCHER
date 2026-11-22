@@ -30,6 +30,25 @@
   <a href="https://github.com/horizon-rust/horizon"><b>Original Horizon</b></a>
 </p>
 
+## KRETOS-LAUNCHER (local build)
+
+This repository is **KRETOS-LAUNCHER**, KREETOS's local build of
+[Elyhorizon](https://github.com/kkerneldev/Elyhorizon), which is itself an
+independent fork of [Horizon](https://github.com/horizon-rust/horizon).
+All original Horizon, Elyhorizon and Ely.by credits and the MIT license below
+still apply.
+
+Local changes on top of Elyhorizon `faf034f`:
+
+- public Microsoft/Ely.by sign-in IDs bundled into the launcher, with a
+  **Microsoft account / Ely.by account** chooser on the sign-in gate
+- a visible **Local offline play** toggle in Settings (uses game files already on disk)
+- launcher self-update disabled, so local patches are never overwritten
+- `horizon-launcher version list` and `version download <id>` for any Java Edition version
+- the original fork is kept as the `upstream` git remote
+
+See [docs/KRETOS.md](docs/KRETOS.md) for paths, commands and known limits.
+
 ## About this fork
 
 **Elyhorizon is a separate Horizon distribution with Ely.by integration.** It is
