@@ -24,6 +24,7 @@ mod glass_home;
 mod glass_ui;
 mod home;
 mod home_tabs;
+mod install_play;
 mod import_page;
 mod instance_icons;
 mod instance_mods;
@@ -346,6 +347,8 @@ struct Launcher {
     home_tab: home_tabs::HomeTab,
     /// Home's Play or folder menu, while open (glass look).
     home_menu: glass_home::HomeMenu,
+    /// The Legacy-style account/version/loader panel on a Java instance's Home.
+    install_play: install_play::InstallPlay,
     /// Whether the pointer is over Home's folder button, which then shows its ⋯.
     folder_hovered: bool,
     /// When the running game was first seen running, for Home's "Playing for…".
@@ -588,6 +591,7 @@ impl Launcher {
             download_seen: None,
             home_tab: home_tabs::HomeTab::from_env(),
             home_menu: Default::default(),
+            install_play: install_play::InstallPlay::default(),
             folder_hovered: false,
             client_since: None,
             instance_mods: Default::default(),
@@ -3082,6 +3086,9 @@ impl Launcher {
             .children(self.export_panel(cx))
             .children(self.launch_panel(cx))
             .children(self.memory_row(cx));
+        if java.is_some() {
+            rows = rows.child(self.install_play_panel(cx));
+        }
         rows = match &java {
             Some(java) => rows.child(index_row(
                 2,

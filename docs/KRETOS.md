@@ -14,6 +14,7 @@ GitHub: https://github.com/KREETOS/KRETOS-LAUNCHER
 | Public sign-in IDs bundled, so both providers work in a source build | `launcher/src/account.rs`, `launcher/src/account/ely/oauth.rs` |
 | Sign-in gate shows a Microsoft / Ely.by provider chooser | `launcher/src/owner_page.rs` |
 | Settings has a visible **Local offline play** toggle (offline names with existing files) | `launcher/src/dev_options.rs` |
+| Legacy-style **Install and play** panel: account, version and loader picker with one button | `launcher/src/install_play.rs`, `launcher/src/main.rs` |
 | Launcher never self-updates (protects local patches) | `launcher/src/backend.rs` |
 | `version list` / `version download <id>` CLI, with SHA-1 checks and authorization gate | `launcher/src/cli.rs`, `launcher/src/minecraft_versions.rs` |
 
