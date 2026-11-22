@@ -3092,6 +3092,7 @@ impl Launcher {
             .children(self.memory_row(cx));
         if java.is_some() {
             rows = rows.child(self.install_play_panel(cx));
+            rows = rows.child(self.content_panel(cx));
         }
         rows = match &java {
             Some(java) => rows.child(index_row(

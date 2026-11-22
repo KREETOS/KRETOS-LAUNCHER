@@ -892,6 +892,57 @@ impl Launcher {
         }
     }
 
+    /// A compact content browser for a Java instance's Home tab: Modrinth results filtered to
+    /// the selected version and loader, with the same checksum-checked one-click install.
+    pub(super) fn content_panel(&mut self, cx: &mut Context<Self>) -> Div {
+        let t = self.theme;
+        self.mods_load();
+        if !self.mods.asked {
+            self.mods.asked = true;
+            self.mods_search(0);
+        }
+        let this = cx.entity().downgrade();
+        let open = self.mods.kind;
+        let shown: Vec<_> = [
+            (PackKind::Mod, "Mods", "Java mods"),
+            (PackKind::ResourcePack, "Resource packs", "Textures and models"),
+            (PackKind::DataPack, "Data packs", "World data"),
+        ]
+        .into_iter()
+        .collect();
+        let kinds = blocks::tabs("content-kind", &shown, open, &t, {
+            let this = this.clone();
+            move |kind, _, cx| {
+                let _ = this.update(cx, |this, cx| {
+                    if this.mods.kind != kind {
+                        this.mods.kind = kind;
+                        this.mods.source = source_for(kind);
+                        this.mods.browse.filters = Default::default();
+                        this.mods.browse.open = None;
+                        this.mods_search(0);
+                    }
+                    cx.notify();
+                });
+            }
+        });
+        div()
+            .flex()
+            .flex_col()
+            .gap(px(8.))
+            .child(section_title("Get mods & packs", "search", &t))
+            .child(kinds)
+            .child(self.mods_field(cx))
+            .children(self.mods_target_line(cx))
+            .children(self.mods_busy_plate())
+            .child(
+                div()
+                    .id("content-results")
+                    .max_h(px(320.))
+                    .overflow_y_scroll()
+                    .child(self.mods_results(cx)),
+            )
+    }
+
     pub(super) fn mods_page(&mut self, cx: &mut Context<Self>) -> Div {
         let t = self.theme;
         self.mods_load();
