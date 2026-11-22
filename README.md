@@ -47,6 +47,7 @@ Local changes on top of Elyhorizon `faf034f`:
 - **recent installed versions** as one-click chips and a **new Minecraft release** notification on startup
 - **memory presets** (Auto / 2 / 4 / 8 GB) beside the memory slider
 - a unified **Get mods & packs** panel on Java Home (Mods / Resource packs / Data packs), auto-filtered to the instance's version and loader, with one-click checksum-verified install and dependencies
+- the mod registry index accepts a native mod published with a `.hmod` name (upstream registry bug)
 - launcher self-update disabled, so local patches are never overwritten
 - `horizon-launcher version list` and `version download <id>` for any Java Edition version
 - the original fork is kept as the `upstream` git remote
