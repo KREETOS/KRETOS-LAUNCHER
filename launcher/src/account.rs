@@ -39,12 +39,16 @@ const SIGN_IN_AGAIN: &str = "Your Microsoft sign-in expired. Sign in again.";
 /// The Minecraft token is renewed when it has less than this left.
 const RENEW_BEFORE: u64 = 3600;
 
+/// Public Microsoft application id bundled by this local build (from the official release).
+const BUNDLED_MSA_CLIENT_ID: &str = "8e0f7a12-bfb3-4fe8-b9a5-48fd50a15a9a";
+
 /// The configured Azure app, if any: the run-time variable wins over the build-time one, and an
 /// empty value means none.
 pub fn client_id() -> Option<String> {
     std::env::var("HORIZON_MSA_CLIENT_ID")
         .ok()
         .or_else(|| option_env!("HORIZON_MSA_CLIENT_ID").map(str::to_owned))
+        .or_else(|| Some(BUNDLED_MSA_CLIENT_ID.to_owned()))
         .map(|id| id.trim().to_owned())
         .filter(|id| !id.is_empty())
 }

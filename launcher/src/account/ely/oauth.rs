@@ -36,7 +36,7 @@ impl Config {
         Self::load_with(
             store(),
             &|key| std::env::var(key).ok(),
-            option_env!("HORIZON_ELY_CLIENT_ID"),
+            option_env!("HORIZON_ELY_CLIENT_ID").or(Some("elyherizondesktop")),
         )
     }
 
@@ -524,7 +524,7 @@ fn oauth_request(method: &str, url: &str) -> ureq::Request {
 pub fn status() -> Result<Value, String> {
     let config = Config::load()?;
     Ok(
-        json!({"client_id": config.client_id, "bundled_client_id": option_env!("HORIZON_ELY_CLIENT_ID"), "flow": "authorization_code_pkce", "code_challenge_method": "S256", "client_secret_required": false}),
+        json!({"client_id": config.client_id, "bundled_client_id": Some(config.client_id.as_str()), "flow": "authorization_code_pkce", "code_challenge_method": "S256", "client_secret_required": false}),
     )
 }
 

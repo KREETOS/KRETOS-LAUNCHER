@@ -29,6 +29,12 @@ impl Launcher {
         self.start_sign_in();
     }
 
+    /// Opens the screen and starts Ely.by sign-in on it.
+    pub(crate) fn ely_sign_in_to_play(&mut self) {
+        self.owner_screen_open = true;
+        self.submit_ely();
+    }
+
     /// Closes it; it comes back with the next refused Play.
     fn close_owner_screen(&mut self) {
         self.cancel_sign_in();
@@ -43,6 +49,7 @@ impl Launcher {
         let t = self.theme;
         let n = t.night;
         let configured = account::client_id().is_some();
+        let ely = self.ely.active;
         // The screenshot preview shows a code without asking Microsoft for one.
         let state = match &self.sign_in_state {
             _ if sign_in_preview() => Shown::Code("https://www.microsoft.com/link", "K7Q-4MXR"),
@@ -59,6 +66,29 @@ impl Launcher {
                 .relative()
                 .child(tr(s).to_string())
         };
+        let chooser = div()
+            .relative()
+            .flex()
+            .items_center()
+            .gap(px(10.))
+            .mt(px(12.))
+            .child(
+                shell::action("owner-microsoft", shell::Action::Raised, &t)
+                    .child(shell::label(tr("Microsoft account").to_string()))
+                    .on_click(cx.listener(|this, _: &ClickEvent, _, cx| {
+                        this.ely.active = false;
+                        this.sign_in_to_play();
+                        cx.notify();
+                    })),
+            )
+            .child(
+                shell::action("owner-ely", shell::Action::Raised, &t)
+                    .child(shell::label(tr("Ely.by account").to_string()))
+                    .on_click(cx.listener(|this, _: &ClickEvent, _, cx| {
+                        this.ely_sign_in_to_play();
+                        cx.notify();
+                    })),
+            );
         let mut body = div()
             .relative()
             .flex()
@@ -85,7 +115,8 @@ impl Launcher {
             .child(line(
                 "Your worlds, offline names and settings stay where they are.",
                 n.muted,
-            ));
+            ))
+            .child(chooser);
         let raised = || {
             div()
                 .relative()
@@ -162,6 +193,7 @@ impl Launcher {
                 )
             }
             Shown::Starting(_) => None,
+            _ if ely => None,
             _ if !configured => None,
             _ => Some(
                 microsoft::sign_in_button("owner-sign-in", &t).on_click(cx.listener(
@@ -172,7 +204,7 @@ impl Launcher {
                 )),
             ),
         };
-        let waiting = matches!(state, Shown::Code(..)).then(|| {
+        let waiting = (!ely && matches!(state, Shown::Code(..))).then(|| {
             shell::text(theme::night::CAPTION, shell::c(n.muted))
                 .relative()
                 .child(tr("Waiting for Microsoft… the window goes on by itself.").to_string())
@@ -207,7 +239,7 @@ impl Launcher {
         .max_w_full()
         .p(px(32.))
         .child(body)
-        .child(self.ely_form(cx))
+        .children(ely.then(|| self.ely_form(cx)))
         .child(answers)
         .children(waiting);
         // The sky stays behind, dimmed: the sheet is over the launcher, not instead of it.

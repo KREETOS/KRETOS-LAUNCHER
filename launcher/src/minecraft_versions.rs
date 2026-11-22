@@ -4,6 +4,7 @@
 //! files themselves are downloaded only after fresh provider authorization (`mojang.rs`).
 
 use serde::Serialize;
+use sha1::{Digest, Sha1};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -80,7 +81,7 @@ impl Versions {
             id => id,
         };
         self.all.iter().find(|v| v.id == id).ok_or_else(|| {
-            format!("Minecraft has no version {name:?}. `horizon-launcher instance versions` lists them.")
+            format!("Minecraft has no version {name:?}. `horizon-launcher version list` lists them.")
         })
     }
 
@@ -92,6 +93,24 @@ impl Versions {
             Kind::OldBeta | Kind::OldAlpha => old,
         })
     }
+}
+
+/// Fetches the version JSON named by `version` and checks it against the SHA-1 in Mojang's
+/// version list. This is the metadata the downloader needs (client, libraries, assets).
+pub fn metadata(version: &Version) -> Result<serde_json::Value, String> {
+    let body = crate::backend::get_bytes(&version.url)?;
+    let actual = Sha1::digest(&body)
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect::<String>();
+    if actual != version.sha1 {
+        return Err(format!(
+            "{}: the version JSON is not the one Mojang lists (sha1 {actual})",
+            version.id
+        ));
+    }
+    serde_json::from_slice(&body)
+        .map_err(|e| format!("{}: invalid version JSON: {e}", version.id))
 }
 
 fn cache() -> PathBuf {

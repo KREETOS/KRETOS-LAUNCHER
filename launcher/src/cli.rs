@@ -8,10 +8,13 @@ use horizon_launcher::github_mods;
 use horizon_launcher::i18n::{tr, trf};
 use horizon_launcher::instances;
 use horizon_launcher::loaders;
+use horizon_launcher::minecraft_versions::{self, Kind as VersionKind};
 use horizon_launcher::native_mods;
 use horizon_launcher::native_status;
 use horizon_launcher::other_launchers;
 use horizon_launcher::server_list;
+use serde_json::Value;
+use sha1::{Digest, Sha1};
 use std::io::{IsTerminal, Write};
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -37,6 +40,15 @@ enum JavaCmd {
     /// Download Mojang's Java runtime: a major (8, 16, 17, 21, 25) or a component name from a
     /// version's JSON (java-runtime-delta)
     Install { java: String },
+}
+
+#[derive(Subcommand)]
+enum VersionCmd {
+    /// Print the ids of the released Minecraft: Java Edition versions from Mojang's manifest
+    List,
+    /// Download and verify a version's client jar, libraries and assets into the launcher's
+    /// Minecraft folder. Needs a fresh Microsoft or Ely.by sign-in.
+    Download { id: String },
 }
 
 #[derive(Subcommand)]
@@ -712,6 +724,11 @@ enum Cmd {
         #[arg(long)]
         installed: bool,
     },
+    /// List Minecraft versions from Mojang, or download one with the authorized downloader
+    Version {
+        #[command(subcommand)]
+        action: VersionCmd,
+    },
     /// Download and install a release (a tag such as v2026.10.13, or "latest")
     Install { tag: String },
     /// Remove an installed version
@@ -1183,6 +1200,166 @@ fn release_json(r: &Release) -> serde_json::Value {
     })
 }
 
+/// Lowercase sha1 of a file, if it can be read.
+fn file_sha1(path: &Path) -> Option<String> {
+    let mut file = std::fs::File::open(path).ok()?;
+    let mut hash = Sha1::new();
+    let mut buffer = vec![0u8; 1 << 20];
+    loop {
+        match std::io::Read::read(&mut file, &mut buffer) {
+            Ok(0) => break,
+            Ok(n) => hash.update(&buffer[..n]),
+            Err(_) => return None,
+        }
+    }
+    Some(hash.finalize().iter().map(|b| format!("{b:02x}")).collect())
+}
+
+/// Mojang's name for this system, as used by libraries and natives.
+fn version_os() -> &'static str {
+    match std::env::consts::OS {
+        "windows" => "windows",
+        "macos" => "osx",
+        _ => "linux",
+    }
+}
+
+/// Whether a library's rules allow it on this system.
+fn library_allowed(library: &Value, os: &str) -> bool {
+    let Some(rules) = library.get("rules").and_then(Value::as_array) else {
+        return true;
+    };
+    let mut allow = false;
+    for rule in rules {
+        let matches = rule["os"]["name"]
+            .as_str()
+            .map_or(true, |name| name == os);
+        if matches {
+            allow = rule["action"].as_str() == Some("allow");
+        }
+    }
+    allow
+}
+
+/// Whether one Maven artifact is present and matches its pinned sha1.
+fn artifact_present(dir: &Path, artifact: &serde_json::Map<String, Value>) -> bool {
+    let Some(path) = artifact.get("path").and_then(Value::as_str) else {
+        return false;
+    };
+    let Some(sha1) = artifact.get("sha1").and_then(Value::as_str) else {
+        return false;
+    };
+    let mut target = dir.join("libraries");
+    for part in path.replace('\\', "/").split('/') {
+        if !part.is_empty() && part != "." && part != ".." {
+            target.push(part);
+        }
+    }
+    file_sha1(&target).as_deref() == Some(sha1)
+}
+
+/// Whether a version is fully present and verified in the launcher's Minecraft folder. The
+/// sounds are optional in the downloader, so they are not required here.
+fn version_installed(id: &str, manifest_sha1: &str, meta: &Value) -> bool {
+    let dir = backend::data_dir().join("minecraft");
+    let version_dir = dir.join("versions").join(id);
+    if file_sha1(&version_dir.join(format!("{id}.json"))).as_deref() != Some(manifest_sha1) {
+        return false;
+    }
+    let client_sha1 = meta["downloads"]["client"]["sha1"].as_str();
+    if client_sha1.is_none()
+        || file_sha1(&version_dir.join(format!("{id}.jar"))).as_deref() != client_sha1
+    {
+        return false;
+    }
+    let os = version_os();
+    for library in meta["libraries"].as_array().into_iter().flatten() {
+        if !library_allowed(library, os) {
+            continue;
+        }
+        if let Some(artifact) = library["downloads"]["artifact"].as_object() {
+            if !artifact_present(&dir, artifact) {
+                return false;
+            }
+        }
+        if let Some(classifier) = library["natives"][os].as_str() {
+            if let Some(artifact) = library["downloads"]["classifiers"][classifier].as_object() {
+                if !artifact_present(&dir, artifact) {
+                    return false;
+                }
+            }
+        }
+    }
+    let index_id = meta["assetIndex"]["id"].as_str();
+    let index_sha1 = meta["assetIndex"]["sha1"].as_str();
+    match (index_id, index_sha1) {
+        (Some(id), Some(sha1)) => {
+            file_sha1(&dir.join("assets/indexes").join(format!("{id}.json"))).as_deref()
+                == Some(sha1)
+        }
+        _ => false,
+    }
+}
+
+/// `horizon-launcher version list|download <id>`.
+fn version_command(action: VersionCmd, as_json: bool) -> Result<(), String> {
+    match action {
+        VersionCmd::List => {
+            let versions = minecraft_versions::load()?;
+            let releases: Vec<_> = versions
+                .all
+                .iter()
+                .filter(|v| v.kind == VersionKind::Release)
+                .collect();
+            if as_json {
+                json(serde_json::json!({
+                    "versions": releases.iter().map(|v| serde_json::json!({
+                        "id": v.id,
+                        "url": v.url,
+                        "type": "release",
+                    })).collect::<Vec<_>>(),
+                }));
+            } else {
+                for v in releases {
+                    println!("{}", v.id);
+                }
+            }
+            Ok(())
+        }
+        VersionCmd::Download { id } => {
+            let versions = minecraft_versions::load()?;
+            let version = versions.find(&id)?;
+            let meta = minecraft_versions::metadata(version)?;
+            let already = version_installed(&version.id, &version.sha1, &meta);
+            if !already {
+                let folder = backend::download_version_for_owner(&version.id, &version.sha1, &|line| {
+                    if !as_json {
+                        eprintln!("{line}");
+                    }
+                })?;
+                if !version_installed(&version.id, &version.sha1, &meta) {
+                    return Err(format!(
+                        "Minecraft {} did not pass verification in {}",
+                        version.id,
+                        folder.display()
+                    ));
+                }
+            }
+            let status = if already { "Already Installed" } else { "Downloaded" };
+            if as_json {
+                json(serde_json::json!({
+                    "id": version.id,
+                    "status": status,
+                    "path": backend::data_dir().join("minecraft"),
+                }));
+            } else {
+                println!("{status}: Minecraft {}", version.id);
+            }
+            Ok(())
+        }
+    }
+}
+
 fn execute(command: Cmd, as_json: bool) -> Result<(), String> {
     if matches!(command, Cmd::Versions { .. } | Cmd::Update { .. }) {
         for (tag, from) in backend::reuse_prepared_everywhere() {
@@ -1240,6 +1417,7 @@ fn execute(command: Cmd, as_json: bool) -> Result<(), String> {
                 println!("{:<15} {}  {}", r.tag, r.date, state);
             }
         }
+        Cmd::Version { action } => version_command(action, as_json)?,
         Cmd::Install { tag } => {
             let label = format!("Installing {tag}");
             let tag = backend::install_tag(&tag, false, progress(label))?;
