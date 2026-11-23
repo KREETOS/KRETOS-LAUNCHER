@@ -25,9 +25,14 @@ const KINDS: [(PackKind, &str, &str); 5] = [
     (PackKind::Shader, "Shader packs", "zap"),
     (PackKind::DataPack, "Data packs", "notes"),
 ];
-/// The kinds with a tab: Horizon's registry's, and Modrinth's resource packs. Modrinth's mods and
-/// data packs aren't usable yet; the Modpacks tab shows while the sidebar has it open.
-const SHOWN: [PackKind; 3] = [PackKind::Mod, PackKind::ResourcePack, PackKind::Shader];
+/// The kinds with a tab on the full Mods page. Java mods and data packs come from Modrinth for
+/// the selected instance's version; the Modpacks tab shows while the sidebar has it open.
+const SHOWN: [PackKind; 4] = [
+    PackKind::Mod,
+    PackKind::ResourcePack,
+    PackKind::DataPack,
+    PackKind::Shader,
+];
 /// Java mods checked at once.
 const CHECKING: usize = 2;
 /// The sources to pick from on the Resource packs and Modpacks tabs; CurseForge is shown beside them as coming soon.
@@ -1800,7 +1805,7 @@ impl Launcher {
 /// modpacks.
 fn source_for(kind: PackKind) -> SourceId {
     match kind {
-        PackKind::ResourcePack | PackKind::Modpack => SourceId::Modrinth,
+        PackKind::ResourcePack | PackKind::Modpack | PackKind::DataPack => SourceId::Modrinth,
         _ => SourceId::Horizon,
     }
 }
