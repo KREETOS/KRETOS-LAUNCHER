@@ -5,7 +5,7 @@
 It is not affiliated with Mojang, Microsoft, the Horizon team or Ely.by. The
 original MIT license and credits in [LICENSE](../LICENSE) and the README still apply.
 
-GitHub: https://github.com/KREETOS/KRETOS-LAUNCHER
+GitHub: https://github.com/KREETOS/Lodestone-Launcher
 
 ## Local changes
 
@@ -62,6 +62,6 @@ Toolchain: Rust 1.100, Python 3.14, Temurin JDK 25, Visual Studio C++ tools.
 ## Git
 
 ```sh
-origin     https://github.com/KREETOS/KRETOS-LAUNCHER.git   # your project
+origin     https://github.com/KREETOS/Lodestone-Launcher.git   # your project
 upstream   https://github.com/kkerneldev/Elyhorizon.git     # original fork
 ```
