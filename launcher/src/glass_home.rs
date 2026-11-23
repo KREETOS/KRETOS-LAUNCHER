@@ -72,8 +72,7 @@ impl Launcher {
             .child(self.glass_join_friend(tag, cx))
     }
 
-    /// The edition tabs (`Tabs`, size `sm`): the instance's own lit. An instance's edition is
-    /// chosen when it is made, so the other one is shown but can't be picked.
+    /// The edition marker: this build is Java-only, so only Java Edition is shown.
     fn edition_tabs(&mut self, java: bool) -> Div {
         let grass = self.vanilla_icon().and_then(|path| {
             self.icon_image("mark:grass".into(), 18., false, move || {
@@ -110,16 +109,12 @@ impl Launcher {
                 .into_any_element(),
             None => div().into_any_element(),
         };
+        let _ = java;
         div()
             .flex()
             .items_center()
             .gap(px(4.))
-            .child(tab(
-                "Rust Edition",
-                ui::mark_tile(18., self.look.accent_soft).into_any_element(),
-                !java,
-            ))
-            .child(tab("Java Edition", java_icon, java))
+            .child(tab("Java Edition", java_icon, true))
     }
 
     /// The instance's icon and its name in Bricolage, 64 px at this width

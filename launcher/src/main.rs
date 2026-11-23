@@ -633,6 +633,14 @@ impl Launcher {
             scale: window.scale_factor(),
         };
         this.reload_instances();
+        // Java-only build: if the remembered instance is one of the hidden Horizon ones,
+        // fall back to a Java instance so Home opens on something playable.
+        if this.selected_instance().is_some_and(|i| i.java.is_none()) {
+            if let Some(java) = instances::list().into_iter().find(|i| i.java.is_some()) {
+                let _ = instances::select(&java.id);
+                this.reload_instances();
+            }
+        }
         if this.bench.is_some() {
             this.perf.keep_local_log(false);
         }

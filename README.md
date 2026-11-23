@@ -49,6 +49,7 @@ Local changes on top of Elyhorizon `faf034f`:
 - a unified **Get mods & packs** panel on Java Home (Mods / Resource packs / Data packs), auto-filtered to the instance's version and loader, with one-click checksum-verified install and dependencies
 - a **Data packs** tab on the full Mods page too (Modrinth + world picker)
 - the mod registry index accepts a native mod published with a `.hmod` name (upstream registry bug)
+- **Java-only UI**: the Rust Edition tab and the built-in Horizon instances are hidden, with no Rust versions installed (source code kept intact)
 - launcher self-update disabled, so local patches are never overwritten
 - `horizon-launcher version list` and `version download <id>` for any Java Edition version
 - the original fork is kept as the `upstream` git remote

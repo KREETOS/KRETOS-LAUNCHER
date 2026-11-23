@@ -191,6 +191,10 @@ impl Launcher {
         let mut out = Vec::new();
         let mut group = None;
         for i in self.instances.list.clone() {
+            // Java-only build: keep the built-in Horizon instances out of the sidebar.
+            if i.java.is_none() && matches!(i.kind, InstanceKind::Default | InstanceKind::Own) {
+                continue;
+            }
             if i.group != group {
                 group = i.group.clone();
                 if let Some(g) = &group {

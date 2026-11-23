@@ -165,6 +165,10 @@ impl Launcher {
             div().flex().flex_col().gap(px(4.))
         };
         for i in self.instances.list.clone() {
+            // Java-only build: keep the built-in Horizon instances out of the sidebar.
+            if i.java.is_none() && matches!(i.kind, InstanceKind::Default | InstanceKind::Own) {
+                continue;
+            }
             if i.group != group {
                 list = flush(list, &mut out);
                 group = i.group.clone();

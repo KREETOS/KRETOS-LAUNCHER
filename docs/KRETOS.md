@@ -20,6 +20,7 @@ GitHub: https://github.com/KREETOS/KRETOS-LAUNCHER
 | Unified **Get mods & packs** panel (Mods / Resource packs / Data packs), auto-filtered and one-click install | `launcher/src/mods_page.rs`, `launcher/src/main.rs` |
 | **Data packs** tab on the full Mods page (Modrinth + world picker) | `launcher/src/mods_page.rs` |
 | Registry index accepts a native mod published as `.hmod` (upstream registry bug) | `crates/horizon-mods/src/index.rs` |
+| Java-only UI: Rust tab and Horizon instances hidden; no Rust versions installed | `launcher/src/glass_home.rs`, `launcher/src/frame.rs`, `launcher/src/instances_page.rs`, `launcher/src/main.rs` |
 | Launcher never self-updates (protects local patches) | `launcher/src/backend.rs` |
 | `version list` / `version download <id>` CLI, with SHA-1 checks and authorization gate | `launcher/src/cli.rs`, `launcher/src/minecraft_versions.rs` |
 
