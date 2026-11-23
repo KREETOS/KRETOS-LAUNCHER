@@ -51,6 +51,7 @@ Local changes on top of Elyhorizon `faf034f`:
 - a **Data packs** tab on the full Mods page too (Modrinth + world picker)
 - the mod registry index accepts a native mod published with a `.hmod` name (upstream registry bug)
 - **Java-only UI**: the Rust Edition tab and the built-in Horizon instances are hidden, with no Rust versions installed (source code kept intact)
+- an **update badge** on Java Home with one-click **Update all** for mods/packs
 - a **first-run setup wizard** (version → account → ready Java instance), replayable from Settings
 - a **Crash assistant** that turns a crash report into a plain-language reason with a fix button
 - launcher self-update disabled, so local patches are never overwritten

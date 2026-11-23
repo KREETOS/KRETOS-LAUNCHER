@@ -22,6 +22,7 @@ GitHub: https://github.com/KREETOS/KRETOS-LAUNCHER
 | **Data packs** tab on the full Mods page (Modrinth + world picker) | `launcher/src/mods_page.rs` |
 | Registry index accepts a native mod published as `.hmod` (upstream registry bug) | `crates/horizon-mods/src/index.rs` |
 | Java-only UI: Rust tab and Horizon instances hidden; no Rust versions installed | `launcher/src/glass_home.rs`, `launcher/src/frame.rs`, `launcher/src/instances_page.rs`, `launcher/src/main.rs` |
+| Update badge on Java Home with one-click Update all | `launcher/src/main.rs`, `launcher/src/mods_page.rs` |
 | First-run setup wizard (version → account → instance), replayable from Settings | `launcher/src/wizard.rs`, `launcher/src/main.rs` |
 | Crash assistant: plain reason + fix button from `latest.log` / crash report | `launcher/src/main.rs` |
 | Launcher never self-updates (protects local patches) | `launcher/src/backend.rs` |

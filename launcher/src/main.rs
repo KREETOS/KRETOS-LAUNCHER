@@ -3054,6 +3054,11 @@ impl Launcher {
                 .children(memory);
         };
         let prepared = backend::is_prepared(&tag);
+        // A Java instance's installed mods and their available updates are read here too, so
+        // Home can show one badge and Update all without opening the Mods page.
+        if java.is_some() {
+            self.mods_load();
+        }
         // Prepared without sounds (#1035): Prepare again is the fix, so it stands out.
         let silent = prepared && !backend::has_sounds(&tag);
         let version = java
@@ -3178,6 +3183,33 @@ impl Launcher {
             .children(self.memory_row(cx));
         if java.is_some() {
             rows = rows.child(self.content_panel(cx));
+            if !self.mods.updates.is_empty() {
+                let count = self.mods.updates.len();
+                let update_all = button(
+                    "home-update-all",
+                    trf("Update all ({count})", &[("count", &count.to_string())]),
+                    Kind::Secondary,
+                    &t,
+                )
+                .on_click(cx.listener(|this, _: &ClickEvent, _, cx| {
+                    this.mods_update_all();
+                    cx.notify();
+                }));
+                rows = rows.child(index_row(
+                    4,
+                    tr("Updates"),
+                    Some(
+                        div()
+                            .child(trf(
+                                "{count} mods or packs have a newer version.",
+                                &[("count", &count.to_string())],
+                            ))
+                            .into_any_element(),
+                    ),
+                    Some(update_all.into_any_element()),
+                    &t,
+                ));
+            }
         }
         rows = match &java {
             Some(java) => rows.child(index_row(
