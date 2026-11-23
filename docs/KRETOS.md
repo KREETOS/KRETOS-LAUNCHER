@@ -17,6 +17,7 @@ GitHub: https://github.com/KREETOS/KRETOS-LAUNCHER
 | Legacy-style **Install and play** panel: account, version and loader picker with one button | `launcher/src/install_play.rs`, `launcher/src/main.rs` |
 | Recent installed versions as chips; new Minecraft release notice on startup | `launcher/src/install_play.rs`, `launcher/src/backend.rs`, `launcher/src/main.rs` |
 | Memory presets: Auto / 2 GB / 4 GB / 8 GB | `launcher/src/launch_page.rs` |
+| Java preflight in Install-and-play: needed major shown, one-click Mojang runtime install | `launcher/src/install_play.rs` |
 | Unified **Get mods & packs** panel (Mods / Resource packs / Data packs), auto-filtered and one-click install | `launcher/src/mods_page.rs`, `launcher/src/main.rs` |
 | **Data packs** tab on the full Mods page (Modrinth + world picker) | `launcher/src/mods_page.rs` |
 | Registry index accepts a native mod published as `.hmod` (upstream registry bug) | `crates/horizon-mods/src/index.rs` |

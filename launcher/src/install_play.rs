@@ -8,8 +8,20 @@ use crate::shell::{c, Action};
 use horizon_launcher::account::{self, Player};
 use theme::night;
 use horizon_launcher::instances;
+use horizon_launcher::java::{self, Need as JavaNeed};
 use horizon_launcher::loaders::Kind as LoaderKind;
 use horizon_launcher::minecraft_versions::{self, Kind as VersionKind};
+use serde_json::Value;
+
+/// Java runtime check for the chosen version.
+#[derive(Clone, Debug)]
+pub(super) enum JavaState {
+    Checking(String),
+    Ready(JavaNeed),
+    Missing(JavaNeed),
+    Installing(JavaNeed),
+    Error(String),
+}
 
 /// State of the install-and-play panel.
 #[derive(Default)]
@@ -23,6 +35,7 @@ pub(super) struct InstallPlay {
     pub(super) account: Option<String>,
     pub(super) show_versions: bool,
     pub(super) status: Option<String>,
+    pub(super) java: Option<JavaState>,
 }
 
 impl Launcher {
@@ -69,6 +82,81 @@ impl Launcher {
                     Ok(v) => VersionList::Ready(v),
                     Err(e) => VersionList::Failed(e),
                 };
+            });
+        })
+        .detach();
+    }
+
+    /// The Java major a version needs: its local version JSON, else Mojang's metadata.
+    fn java_need(version: &str) -> Option<JavaNeed> {
+        let path = backend::data_dir()
+            .join("minecraft/versions")
+            .join(version)
+            .join(format!("{version}.json"));
+        if let Ok(text) = std::fs::read_to_string(path) {
+            if let Ok(value) = serde_json::from_str::<Value>(&text) {
+                return Some(JavaNeed::of(&value));
+            }
+        }
+        let versions = minecraft_versions::load().ok()?;
+        let found = versions.find(version).ok()?;
+        minecraft_versions::metadata(found)
+            .ok()
+            .map(|value| JavaNeed::of(&value))
+    }
+
+    /// Checks whether the selected Java instance has the runtime its version needs.
+    pub(super) fn refresh_java(&mut self, cx: &mut Context<Self>) {
+        let Some(instance) = self.selected_instance().cloned() else {
+            return;
+        };
+        let Some(game) = instance.java.as_ref() else {
+            return;
+        };
+        let id = game.minecraft.clone();
+        let chosen = game.home.clone();
+        if matches!(&self.install_play.java, Some(JavaState::Checking(v)) if v == &id) {
+            return;
+        }
+        self.install_play.java = Some(JavaState::Checking(id.clone()));
+        let task = cx.background_executor().spawn(async move {
+            let Some(need) = Self::java_need(&id) else {
+                return Err(format!("Could not read Java needs for {id}."));
+            };
+            let mojang = java::mojang_runtimes(&java::runtimes_dir());
+            let installed = java::installed();
+            match java::pick(&need, chosen.as_deref(), &mojang, &installed) {
+                Ok(Some(_)) => Ok(JavaState::Ready(need)),
+                Ok(None) => Ok(JavaState::Missing(need)),
+                Err(e) => Err(e),
+            }
+        });
+        cx.spawn(async move |this, cx| {
+            let result = task.await;
+            let _ = this.update(cx, |this, _| {
+                this.install_play.java = Some(match result {
+                    Ok(state) => state,
+                    Err(e) => JavaState::Error(e),
+                });
+            });
+        })
+        .detach();
+    }
+
+    /// Downloads Mojang's runtime for the missing version, then checks again.
+    fn install_java(&mut self, cx: &mut Context<Self>) {
+        let Some(JavaState::Missing(need)) = self.install_play.java.clone() else {
+            return;
+        };
+        self.install_play.java = Some(JavaState::Installing(need.clone()));
+        let task = cx
+            .background_executor()
+            .spawn(async move { java::install(&need, &|_| {}) });
+        cx.spawn(async move |this, cx| {
+            let result = task.await;
+            let _ = this.update(cx, |this, cx| match result {
+                Ok(_) => this.refresh_java(cx),
+                Err(e) => this.install_play.java = Some(JavaState::Error(e)),
             });
         })
         .detach();
@@ -188,6 +276,7 @@ impl Launcher {
     /// The panel itself, shown on the Overview tab of a Java instance.
     pub(super) fn install_play_panel(&mut self, cx: &mut Context<Self>) -> Div {
         self.fetch_install_versions(cx);
+        self.refresh_java(cx);
         let t = self.theme;
         let n = t.night;
         let caption = |s: &str| {
@@ -240,6 +329,7 @@ impl Launcher {
             button(format!("recent-{v}"), v, Kind::Ghost, &t).on_click(cx.listener(
                 move |this, _: &ClickEvent, _, cx| {
                     this.install_play.version = Some(id.clone());
+                    this.install_play.java = None;
                     this.install_play.show_versions = false;
                     cx.notify();
                 },
@@ -271,6 +361,7 @@ impl Launcher {
                             .child(shell::text(night::UI, c(n.ink)).child(v.id.clone()))
                             .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| {
                                 this.install_play.version = Some(id.clone());
+                                this.install_play.java = None;
                                 this.install_play.show_versions = false;
                                 cx.notify();
                             }))
@@ -303,6 +394,42 @@ impl Launcher {
             );
         }
 
+        let java_row: AnyElement = match &self.install_play.java {
+            Some(JavaState::Ready(need)) => shell::text(night::CAPTION, c(n.muted))
+                .child(trf("Java {major}: ready", &[("major", &need.major.to_string())]))
+                .into_any_element(),
+            Some(JavaState::Missing(need)) => div()
+                .flex()
+                .items_center()
+                .gap(px(8.))
+                .child(
+                    shell::text(night::CAPTION, c(n.ink_soft)).child(
+                        trf("Java {major} is missing", &[("major", &need.major.to_string())]),
+                    ),
+                )
+                .child(
+                    button(
+                        "install-java",
+                        trf("Install Java {major}", &[("major", &need.major.to_string())]),
+                        Kind::Secondary,
+                        &t,
+                    )
+                    .on_click(cx.listener(|this, _: &ClickEvent, _, cx| {
+                        this.install_java(cx);
+                    })),
+                )
+                .into_any_element(),
+            Some(JavaState::Installing(_)) => shell::text(night::CAPTION, c(n.muted))
+                .child(tr("Installing Java…").to_string())
+                .into_any_element(),
+            Some(JavaState::Error(e)) => shell::text(night::CAPTION, c(n.danger))
+                .child(e.clone())
+                .into_any_element(),
+            None | Some(JavaState::Checking(_)) => shell::text(night::CAPTION, c(n.muted))
+                .child(tr("Checking Java…").to_string())
+                .into_any_element(),
+        };
+
         let loader_buttons = [(None, "Vanilla"), (Some(LoaderKind::Fabric), "Fabric"), (Some(LoaderKind::Quilt), "Quilt")]
             .into_iter()
             .map(|(kind, label)| {
@@ -319,6 +446,8 @@ impl Launcher {
                 }))
             });
         rows = rows
+            .child(caption("Java"))
+            .child(java_row)
             .child(caption("Mode"))
             .child(div().flex().gap(px(8.)).children(loader_buttons))
             .child(
