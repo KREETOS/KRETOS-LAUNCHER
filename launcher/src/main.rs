@@ -3094,12 +3094,15 @@ impl Launcher {
         let mut rows = div()
             .flex()
             .flex_col()
-            .children(self.instance_row(1, cx))
+            .children(self.instance_row(1, cx));
+        if java.is_some() {
+            rows = rows.child(self.install_play_panel(cx));
+        }
+        rows = rows
             .children(self.export_panel(cx))
             .children(self.launch_panel(cx))
             .children(self.memory_row(cx));
         if java.is_some() {
-            rows = rows.child(self.install_play_panel(cx));
             rows = rows.child(self.content_panel(cx));
         }
         rows = match &java {
