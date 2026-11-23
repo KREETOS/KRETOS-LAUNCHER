@@ -67,7 +67,7 @@ impl Launcher {
     }
 
     /// Fetch Mojang's version list once, the first time the panel is drawn.
-    fn fetch_install_versions(&mut self, cx: &mut Context<Self>) {
+    pub(super) fn fetch_install_versions(&mut self, cx: &mut Context<Self>) {
         if !matches!(self.install_play.versions, VersionList::NotAsked) {
             return;
         }
@@ -193,7 +193,7 @@ impl Launcher {
 
     /// Creates the Java instance and starts it. A fresh sign-in is required for downloads;
     /// when no owner is signed in we open the gate instead of starting a download.
-    fn install_and_play(&mut self, cx: &mut Context<Self>) {
+    pub(super) fn install_and_play(&mut self, cx: &mut Context<Self>) {
         let version = self.install_play.version.clone();
         let versions = match &self.install_play.versions {
             VersionList::Ready(v) => Some(v),

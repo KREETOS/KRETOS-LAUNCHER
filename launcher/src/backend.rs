@@ -3311,6 +3311,9 @@ pub struct Settings {
     /// The newest Minecraft release seen last time, for the new-version notice.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub last_seen_mc_version: Option<String>,
+    /// Whether the first-run setup wizard has been completed.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub wizard_done: bool,
 }
 
 impl Settings {

@@ -25,6 +25,7 @@ mod glass_ui;
 mod home;
 mod home_tabs;
 mod install_play;
+mod wizard;
 mod import_page;
 mod instance_icons;
 mod instance_mods;
@@ -412,6 +413,8 @@ struct Launcher {
     home_menu: glass_home::HomeMenu,
     /// The Legacy-style account/version/loader panel on a Java instance's Home.
     install_play: install_play::InstallPlay,
+    /// The first-run setup wizard.
+    wizard: wizard::Wizard,
     /// Whether the pointer is over Home's folder button, which then shows its ⋯.
     folder_hovered: bool,
     /// When the running game was first seen running, for Home's "Playing for…".
@@ -656,6 +659,7 @@ impl Launcher {
             home_tab: home_tabs::HomeTab::from_env(),
             home_menu: Default::default(),
             install_play: install_play::InstallPlay::default(),
+            wizard: wizard::Wizard::default(),
             folder_hovered: false,
             client_since: None,
             instance_mods: Default::default(),
@@ -701,6 +705,12 @@ impl Launcher {
                 let _ = instances::select(&java.id);
                 this.reload_instances();
             }
+        }
+        // New installation: guide the player through version, account and instance creation.
+        if !this.settings.wizard_done
+            && !this.instances.list.iter().any(|i| i.java.is_some())
+        {
+            this.wizard.open = true;
         }
         if this.bench.is_some() {
             this.perf.keep_local_log(false);
@@ -3708,6 +3718,20 @@ impl Launcher {
                         Some(opening.into_any_element()),
                         &t,
                     ))
+                    .child(index_row(
+                        n + 3,
+                        tr("Setup wizard"),
+                        Some(plain("Run the first-run setup again.")),
+                        Some(
+                            button("run-wizard", "Run again", Kind::Secondary, &t)
+                                .on_click(cx.listener(|this, _: &ClickEvent, _, cx| {
+                                    this.open_wizard();
+                                    cx.notify();
+                                }))
+                                .into_any_element(),
+                        ),
+                        &t,
+                    ))
                     .child(group("Network", "globe"))
                     .child(self.proxy_row(n + 4, cx))
                     .child(group("Game", "gamepad"))
@@ -5067,6 +5091,9 @@ impl Render for Launcher {
         }
         if self.asking_consent() {
             root = root.child(self.consent_screen(cx));
+        }
+        if self.wizard.open {
+            root = root.child(self.wizard_page(cx));
         }
         if self.asking_owner() {
             root = root.child(self.owner_screen(cx));
