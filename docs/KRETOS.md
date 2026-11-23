@@ -1,6 +1,6 @@
-# KRETOS-LAUNCHER
+# Lodestone Launcher
 
-This is KREETOS's local build of [Elyhorizon](https://github.com/kkerneldev/Elyhorizon)
+(Formerly KRETOS-LAUNCHER.) This is KREETOS's local build of [Elyhorizon](https://github.com/kkerneldev/Elyhorizon)
 (base commit `faf034f`, itself a fork of [Horizon](https://github.com/horizon-rust/horizon)).
 It is not affiliated with Mojang, Microsoft, the Horizon team or Ely.by. The
 original MIT license and credits in [LICENSE](../LICENSE) and the README still apply.

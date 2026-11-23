@@ -1,5 +1,11 @@
 <p align="center"><strong>English</strong> · <a href="README.ru.md">Русский</a></p>
 
+<p align="center"><img src="docs/media/brand/lodestone.svg" alt="Lodestone logo" width="104" height="104"></p>
+
+<h1 align="center">Lodestone Launcher</h1>
+
+<p align="center">A Java-only Minecraft launcher built on Elyhorizon/Horizon, with Ely.by accounts, mods, resource packs and world backups.</p>
+
 <p align="center">
   <a href="https://github.com/horizon-rust/horizon"><img src="docs/media/brand/icon.svg" alt="Horizon logo" width="104" height="104"></a>
   &nbsp;&nbsp;&nbsp;&nbsp;
@@ -30,9 +36,9 @@
   <a href="https://github.com/horizon-rust/horizon"><b>Original Horizon</b></a>
 </p>
 
-## KRETOS-LAUNCHER (local build)
+## Lodestone Launcher (local build)
 
-This repository is **KRETOS-LAUNCHER**, KREETOS's local build of
+This repository is **Lodestone Launcher** (formerly KRETOS-LAUNCHER), KREETOS's local build of
 [Elyhorizon](https://github.com/kkerneldev/Elyhorizon), which is itself an
 independent fork of [Horizon](https://github.com/horizon-rust/horizon).
 All original Horizon, Elyhorizon and Ely.by credits and the MIT license below

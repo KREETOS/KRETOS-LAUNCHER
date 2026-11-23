@@ -2876,7 +2876,7 @@ impl Launcher {
                 .child(
                     shell::text(theme::night::TITLE, shell::c(n.ink))
                         .font_family(theme::DISPLAY_FONT)
-                        .child("Horizon"),
+                        .child(backend::BRAND),
                 )
         });
         shell::sidebar_plate(&t)
@@ -3587,7 +3587,7 @@ impl Launcher {
             .child(
                 text(theme::HEADING)
                     .text_color(t.ink)
-                    .child(tr("Horizon crashed")),
+                    .child(trf("{app} crashed", &[("app", backend::BRAND)])),
             );
         if !crash.summary.is_empty() {
             body = body.child(div().text_color(t.ink_soft).child(crash.summary));
@@ -5230,14 +5230,14 @@ impl Render for Launcher {
                 .line_height(px(theme::WORDMARK.px * 0.5))
                 .font_weight(FontWeight::BOLD)
                 .text_color(t.ink)
-                .children("HORIZON".chars().enumerate().map(|(i, c)| {
+                .children(backend::BRAND.chars().enumerate().map(|(i, c)| {
                     let at = held - i as f32 * theme::STAGGER.as_secs_f32() * 1.5;
                     let p = ease_out_cubic(at / theme::ENTER.as_secs_f32());
                     div()
                         .relative()
                         .opacity(p)
                         .top(px(theme::RISE * 2. * (1. - p)))
-                        .child(c.to_string())
+                        .child(c.to_ascii_uppercase().to_string())
                 }));
             root = root.child(
                 div()

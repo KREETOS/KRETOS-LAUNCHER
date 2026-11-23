@@ -49,11 +49,11 @@ impl Launcher {
             .child(
                 shell::text(theme::CAPTION, shell::c(n.muted))
                     .font_weight(FontWeight::SEMIBOLD)
-                    .child(tr("KRETOS Launcher setup").to_string()),
+                    .child(trf("{app} setup", &[("app", backend::BRAND)]).to_string()),
             )
             .child(
                 shell::text(theme::TITLE, shell::c(n.ink))
-                    .child(tr("Welcome to KRETOS Launcher").to_string()),
+                    .child(trf("Welcome to {app}", &[("app", backend::BRAND)]).to_string()),
             )
             .child(shell::text(theme::UI, shell::c(n.ink_soft)).child(title.to_string()));
 
