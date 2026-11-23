@@ -1649,6 +1649,17 @@ impl Launcher {
         self.client_started =
             Some(std::time::SystemTime::now() - std::time::Duration::from_secs(2));
         self.starting_client = Some(instance.id.clone());
+        if self.settings.world_backup {
+            for world in horizon_launcher::worlds::list(&instance.home) {
+                match horizon_launcher::worlds::backup(&instance.home, &world) {
+                    Ok(path) => self
+                        .prepare_log
+                        .push_back(format!("Backed up {} → {}", world.name, short(&path))),
+                    Err(e) => self.prepare_log.push_back(e),
+                }
+            }
+            horizon_launcher::worlds::prune_backups(&instance.home, 5);
+        }
         let tx = self.tx.clone();
         std::thread::spawn(move || {
             let log = |line: String| {
@@ -3210,6 +3221,84 @@ impl Launcher {
                     &t,
                 ));
             }
+        }
+        if java.is_some() {
+            let instance = self.selected_instance().cloned();
+            let toggle = switch("world-backup", self.settings.world_backup, &t).on_click(
+                cx.listener(|this, _: &ClickEvent, _, cx| {
+                    this.settings.world_backup = !this.settings.world_backup;
+                    this.save_settings();
+                    cx.notify();
+                }),
+            );
+            let now_instance = instance.clone();
+            let backup_now =
+                button("backup-now", "Back up now", Kind::Secondary, &t).on_click(cx.listener(
+                    move |this, _: &ClickEvent, _, cx| {
+                        if let Some(i) = &now_instance {
+                            for world in horizon_launcher::worlds::list(&i.home) {
+                                match horizon_launcher::worlds::backup(&i.home, &world) {
+                                    Ok(path) => this.prepare_log.push_back(format!(
+                                        "Backed up {} → {}",
+                                        world.name,
+                                        short(&path)
+                                    )),
+                                    Err(e) => this.prepare_log.push_back(e),
+                                }
+                            }
+                            horizon_launcher::worlds::prune_backups(&i.home, 5);
+                        }
+                        cx.notify();
+                    },
+                ));
+            let open_home = instance.as_ref().map(|i| i.home.clone());
+            let open_backups =
+                button("open-backups", "Open backups", Kind::Ghost, &t).on_click(move |_, _, cx| {
+                    let dir = open_home
+                        .clone()
+                        .unwrap_or_else(backend::game_home)
+                        .join("backups");
+                    let _ = std::fs::create_dir_all(&dir);
+                    cx.open_with_system(&dir);
+                });
+            let restore_home = instance.as_ref().map(|i| i.home.clone());
+            let restore = button("restore-backup", "Restore latest", Kind::Ghost, &t).on_click(
+                cx.listener(move |this, _: &ClickEvent, _, cx| {
+                    if let Some(home) = &restore_home {
+                        match horizon_launcher::worlds::newest_backup(home)
+                            .ok_or_else(|| "No backup yet.".to_string())
+                            .and_then(|zip| horizon_launcher::worlds::restore(home, &zip))
+                        {
+                            Ok(folder) => this.prepare_log.push_back(format!(
+                                "Restored backup as world {folder}."
+                            )),
+                            Err(e) => this.prepare_log.push_back(e),
+                        }
+                    }
+                    cx.notify();
+                }),
+            );
+            let actions = div()
+                .flex()
+                .flex_wrap()
+                .gap(px(8.))
+                .child(backup_now)
+                .child(open_backups)
+                .child(restore);
+            rows = rows.child(index_row(
+                4,
+                tr("World backups"),
+                Some(
+                    div()
+                        .child(tr(
+                            "Zip saves before each Play (last 5 kept). Restore creates a new world.",
+                        ))
+                        .child(actions)
+                        .into_any_element(),
+                ),
+                Some(toggle.into_any_element()),
+                &t,
+            ));
         }
         rows = match &java {
             Some(java) => rows.child(index_row(

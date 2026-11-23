@@ -153,6 +153,71 @@ pub fn backup(home: &Path, world: &World) -> Result<PathBuf, String> {
     backup_at(home, world, chrono::Local::now())
 }
 
+/// Keeps only the newest `keep` backup zips in an instance's `backups/` folder.
+pub fn prune_backups(home: &Path, keep: usize) {
+    let dir = home.join("backups");
+    let Ok(entries) = fs::read_dir(&dir) else { return };
+    let mut zips: Vec<_> = entries
+        .flatten()
+        .filter(|e| e.path().extension().is_some_and(|x| x == "zip"))
+        .filter_map(|e| e.metadata().ok().map(|m| (m.modified().ok(), e.path())))
+        .collect();
+    zips.sort_by(|a, b| b.0.cmp(&a.0));
+    for (_, path) in zips.into_iter().skip(keep) {
+        let _ = fs::remove_file(path);
+    }
+}
+
+/// The newest backup zip in an instance's `backups/` folder.
+pub fn newest_backup(home: &Path) -> Option<PathBuf> {
+    let dir = home.join("backups");
+    let mut zips: Vec<_> = fs::read_dir(&dir)
+        .ok()?
+        .flatten()
+        .filter(|e| e.path().extension().is_some_and(|x| x == "zip"))
+        .filter_map(|e| e.metadata().ok().map(|m| (m.modified().ok(), e.path())))
+        .collect();
+    zips.sort_by(|a, b| b.0.cmp(&a.0));
+    zips.into_iter().next().map(|(_, path)| path)
+}
+
+/// Restores a backup zip into `saves` as a new world (the original is left untouched).
+pub fn restore(home: &Path, zip: &Path) -> Result<String, String> {
+    let file = fs::File::open(zip).map_err(|e| format!("{}: {e}", zip.display()))?;
+    let mut archive = zip::ZipArchive::new(file).map_err(|e| e.to_string())?;
+    let name = archive
+        .file_names()
+        .next()
+        .and_then(|n| n.ok())
+        .and_then(|n| n.split('/').next().map(str::to_string))
+        .filter(|n| !n.is_empty())
+        .unwrap_or_else(|| "Restored world".to_string());
+    let saves = home.join("saves");
+    fs::create_dir_all(&saves).map_err(|e| e.to_string())?;
+    let folder = free_name(&saves, &name, "", 1);
+    let target = saves.join(&folder);
+    fs::create_dir_all(&target).map_err(|e| e.to_string())?;
+    for i in 0..archive.len() {
+        let mut entry = archive.by_index(i).map_err(|e| e.to_string())?;
+        let raw = entry
+            .name()
+            .map_err(|e| e.to_string())?
+            .replace('\\', "/");
+        let relative = raw.split_once('/').map_or("", |(_, rest)| rest);
+        if relative.is_empty() || relative.split('/').any(|p| p == ".." || p.is_empty()) {
+            continue;
+        }
+        let out = target.join(relative);
+        if let Some(parent) = out.parent() {
+            fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+        }
+        std::io::copy(&mut entry, &mut fs::File::create(&out).map_err(|e| e.to_string())?)
+            .map_err(|e| e.to_string())?;
+    }
+    rename_level(&target, &folder).map_err(|e| e.to_string())?;
+    Ok(folder)
+}
+
 fn backup_at(
     home: &Path,
     world: &World,

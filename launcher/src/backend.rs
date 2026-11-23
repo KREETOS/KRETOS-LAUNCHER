@@ -3314,6 +3314,9 @@ pub struct Settings {
     /// Whether the first-run setup wizard has been completed.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub wizard_done: bool,
+    /// Back up Java worlds automatically before each Play.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub world_backup: bool,
 }
 
 impl Settings {
