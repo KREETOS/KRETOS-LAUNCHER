@@ -146,7 +146,68 @@ struct Crash {
     report: Option<std::path::PathBuf>,
     /// One line on what went wrong: the report's error, else how the process ended.
     summary: String,
+    /// A plain-language guess at the cause and where to fix it.
+    fix: CrashFix,
     copied: bool,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum FixAction {
+    Settings,
+    Mods,
+    Java,
+    Versions,
+    None,
+}
+
+#[derive(Clone)]
+struct CrashFix {
+    reason: String,
+    action: FixAction,
+    label: String,
+}
+
+/// Turns a crash report into a plain reason and one useful next click.
+fn crash_fix(summary: &str, report: &str) -> CrashFix {
+    let text = format!("{summary}\n{report}").to_lowercase();
+    let has = |s: &str| text.contains(s);
+    if has("cache leases") || has("unregistered cache") {
+        CrashFix {
+            reason: tr("This Rust client belongs to a different Horizon build than this launcher. Use a Java Edition instance instead.").to_string(),
+            action: FixAction::None,
+            label: String::new(),
+        }
+    } else if has("java_home") || has("no java") || has("could not find java") || (has("java") && has("not found")) {
+        CrashFix {
+            reason: tr("The Java runtime this version needs is missing or not selected.").to_string(),
+            action: FixAction::Java,
+            label: tr("Install Java").to_string(),
+        }
+    } else if has("not configured") || has("client_id") {
+        CrashFix {
+            reason: tr("A sign-in ID is missing from this build. Check the account settings.").to_string(),
+            action: FixAction::Settings,
+            label: tr("Open settings").to_string(),
+        }
+    } else if has("mixin") || has("hmod") || has("class file") || has("mod ") {
+        CrashFix {
+            reason: tr("A mod may not match this Minecraft version or loader. Check your installed mods.").to_string(),
+            action: FixAction::Mods,
+            label: tr("Open mods").to_string(),
+        }
+    } else if has("outofmemory") || has("heap space") {
+        CrashFix {
+            reason: tr("Java ran out of memory. Raise the memory limit for this instance.").to_string(),
+            action: FixAction::None,
+            label: String::new(),
+        }
+    } else {
+        CrashFix {
+            reason: tr("Horizon stopped with an error. The report below has the exact cause.").to_string(),
+            action: FixAction::None,
+            label: String::new(),
+        }
+    }
 }
 
 /// The opening: the wordmark holds at least `OPENING_HOLD` (until the release
@@ -1302,10 +1363,11 @@ impl Launcher {
                                         .into(),
                                 );
                             } else if error.is_some() || report.is_some() {
-                                let summary = report
+                                let report_text = report
                                     .as_ref()
                                     .and_then(|p| std::fs::read_to_string(p).ok())
-                                    .and_then(|text| backend::crash_summary(&text))
+                                    .unwrap_or_default();
+                                let summary = backend::crash_summary(&report_text)
                                     .or_else(|| {
                                         let tail = self
                                             .prepare_log
@@ -1317,9 +1379,11 @@ impl Launcher {
                                         })
                                     })
                                     .unwrap_or_default();
+                                let fix = crash_fix(&summary, &report_text);
                                 self.crash = Some(Crash {
                                     report,
                                     summary,
+                                    fix,
                                     copied: false,
                                 });
                             }
@@ -3353,6 +3417,23 @@ impl Launcher {
                     .on_click(move |_, _, cx| cx.open_url(&discord)),
             );
         }
+        if crash.fix.action != FixAction::None {
+            let action = crash.fix.action;
+            let label = crash.fix.label.clone();
+            actions = actions.child(
+                button("crash-fix", label, Kind::Primary, &t)
+                    .bg(t.plate)
+                    .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| {
+                        this.page = match action {
+                            FixAction::Settings => Page::Settings,
+                            FixAction::Mods => Page::Mods,
+                            FixAction::Java | FixAction::Versions | FixAction::None => Page::Play,
+                        };
+                        this.crash = None;
+                        cx.notify();
+                    })),
+            );
+        }
         actions = actions.child(
             button("crash-dismiss", "Dismiss", Kind::Ghost, &t).on_click(cx.listener(
                 |this, _: &ClickEvent, _, cx| {
@@ -3380,6 +3461,19 @@ impl Launcher {
         if !crash.summary.is_empty() {
             body = body.child(div().text_color(t.ink_soft).child(crash.summary));
         }
+        body = body.child(
+            div()
+                .flex()
+                .flex_col()
+                .gap(px(2.))
+                .child(
+                    text(theme::LABEL)
+                        .font_weight(FontWeight::SEMIBOLD)
+                        .text_color(t.ink)
+                        .child(tr("Likely fix")),
+                )
+                .child(div().text_color(t.ink_soft).child(crash.fix.reason.clone())),
+        );
         if let Some(report) = &crash.report {
             body = body.child(
                 text(theme::MICRO)
