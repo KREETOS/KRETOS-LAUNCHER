@@ -1,6 +1,6 @@
 <p align="center"><strong>English</strong> · <a href="README.ru.md">Русский</a></p>
 
-<p align="center"><img src="docs/media/brand/lodestone.svg" alt="Lodestone logo" width="104" height="104"></p>
+<p align="center"><img src="docs/media/brand/lodestone-wordmark.svg" alt="Lodestone Launcher" width="460"></p>
 
 <h1 align="center">Lodestone Launcher</h1>
 
